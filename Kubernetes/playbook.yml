@@ -1,0 +1,62 @@
+---
+- name: Déployer et configurer Nginx sur un conteneur Kubernetes
+  hosts: localhost
+  tasks:
+
+    - name: Suppression pod si existe
+      shell: |
+        kubectl delete pod nginx-pod -n demo-app-namespace --ignore-not-found
+      ignore_errors: yes
+
+    - name: Creation pod
+      shell: |
+        kubectl run nginx-pod --image=ubuntu --restart=Never --namespace=demo-app-name>      register: pod_creation
+
+    - name: Vérification si le pod est créé et fonctionnel
+      shell: kubectl get pod nginx-pod -n demo-app-namespace --no-headers -o custom-cotom-columns=":status.phase"  
+      until: pod_status.stdout == "Running"
+      retries: 5
+      delay: 10
+
+    - name: Installation de Nginx et Git dans le pod
+      shell: |
+        kubectl exec -n demo-app-namespace nginx-pod -- apt update
+        kubectl exec -n demo-app-namespace nginx-pod -- apt install nginx git -y
+      register: nginx_installation
+
+    - name: Créer répertoire fichiers
+      shell: kubectl exec -n demo-app-namespace nginx-pod -- mkdir -p /usr/share/nginx>
+
+    - name: Copier fichiers
+      shell: |
+        kubectl cp /mnt/c/my-ec2-project/above-educational-bootstrap-responsive-templa>
+      delegate_to: localhost
+
+    - name: Créer fichier personnalisé
+      copy:
+        content: |
+          server {
+              listen 80;
+              server_name localhost;
+
+              location / {
+                  root /usr/share/nginx/html;
+                  index index.html;
+              }
+              location = /50x.html {
+                  root /usr/share/nginx/html;
+              }
+          }
+        dest: /tmp/nginx-custom.conf
+
+    - name: Copier configuration Nginx dans le pod
+      shell: |
+        kubectl cp /tmp/nginx-custom.conf demo-app-namespace/nginx-pod:/etc/nginx/site>      delegate_to: localhost
+
+    - name: Vérifier configuration Nginx
+      shell: |
+        kubectl exec -n demo-app-namespace nginx-pod -- nginx -t
+      register: nginx_config_check
+
+    - name: Redémarrer Nginx
+      shell: kubectl exec -n demo-app-namespace nginx-pod -- service nginx restart

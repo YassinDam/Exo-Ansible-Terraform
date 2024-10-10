@@ -1,0 +1,69 @@
+- name: Installer et configurer Nginx sur EC2
+  hosts: webserver
+  become: yes  
+  tasks:
+    - name: Mettre à jour les paquets apt (pour Ubuntu)
+      apt:
+        update_cache: yes
+
+    - name: Installer Nginx
+      apt:
+        name: nginx
+        state: present
+
+    - name: Démarrer Nginx
+      service:
+        name: nginx
+        state: started
+        enabled: yes 
+
+    - name: Créer un répertoire pour le projet
+      file:
+        path: /var/www/html/aws2
+        state: directory
+        owner: www-data
+        group: www-data
+        mode: '0755'
+
+    - name: clonegit
+      git:
+          repo: 'https://github.com/YassinDam/above-educational-bootstrap-responsive-template.git'        
+          dest: /var/www/html/aws2/above-educational-bootstrap-responsive-template
+          update: yes
+
+    - name: Créer un fichier de configuration Nginx pour le projet
+      copy:
+        dest: /etc/nginx/sites-available/aws2
+        content: |
+          server {
+              listen 80;
+              server_name ec2-16-170-247-238.eu-north-1.compute.amazonaws.com;
+
+              root /var/www/html/aws2/above-educational-bootstrap-responsive-template;
+              index index.html index.htm;
+
+              location / {
+                  try_files $uri $uri/ =404;
+              }
+          }
+
+    - name: Activer le site Nginx
+      command: nginx -s reload
+      notify: reload nginx
+
+    - name: Créer un lien symbolique pour activer le site
+      command: sudo ln -s /etc/nginx/sites-available/aws2 /etc/nginx/sites-enabled/
+
+    - name: Ajouter ou modifier server_names_hash_bucket_size dans nginx.conf
+      lineinfile:
+        path: /etc/nginx/nginx.conf
+        regexp: '^\\s*server_names_hash_bucket_size'
+        line: '    server_names_hash_bucket_size 128;'
+        state: present
+      notify: reload nginx
+
+  handlers:
+    - name: reload nginx
+      service:
+        name: nginx
+        state: reloaded
