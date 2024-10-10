@@ -10,7 +10,8 @@
 
     - name: Creation pod
       shell: |
-        kubectl run nginx-pod --image=ubuntu --restart=Never --namespace=demo-app-name>      register: pod_creation
+        kubectl run nginx-pod --image=ubuntu --restart=Never --namespace=demo-app-namespace -- sleep infinity
+      register: pod_creation
 
     - name: Vérification si le pod est créé et fonctionnel
       shell: kubectl get pod nginx-pod -n demo-app-namespace --no-headers -o custom-cotom-columns=":status.phase"  
@@ -50,8 +51,9 @@
         dest: /tmp/nginx-custom.conf
 
     - name: Copier configuration Nginx dans le pod
-      shell: |
-        kubectl cp /tmp/nginx-custom.conf demo-app-namespace/nginx-pod:/etc/nginx/site>      delegate_to: localhost
+      shell: |   
+        kubectl cp /tmp/nginx-custom.conf demo-app-namespace/nginx-pod:/etc/nginx/sites-available/default
+      delegate_to: localhost
 
     - name: Vérifier configuration Nginx
       shell: |
